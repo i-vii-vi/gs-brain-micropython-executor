@@ -23,7 +23,8 @@ geyser_on = False
 MAX_TEMPERATURE = 70
 MIN_TEMPERATURE = 30
 
-RELAY_PIN = 2  
+RELAY_PINS = [2, 3, 4, 5]  # Assuming pins connected to relays
+original_relay_states = [0] * len(RELAY_PINS)
 
 def ble_callback(event, data):
     global SSID, PASSWORD
@@ -48,7 +49,7 @@ wifi.connect(SSID, PASSWORD)
 while not wifi.isconnected():
     sleep(1)
 
-adc = ADC(Pin(34))
+adc = [ADC(Pin(pin)) for pin in currentSensor_SIG]
 server = network.Server()
 
 def predict_temperature(coefficients, phase, time):
@@ -79,10 +80,12 @@ def handle_client(client):
     elif b"POST /switch" in request:
         if geyser_on:
             geyser_on = False
-            machine.Pin(RELAY_PIN, machine.Pin.OUT).value(0) 
+            for idx, pin in enumerate(RELAY_PINS):
+                machine.Pin(pin, machine.Pin.OUT).value(original_relay_states[idx])  
         else:
             geyser_on = True
-            machine.Pin(RELAY_PIN, machine.Pin.OUT).value(1)  
+            for pin in RELAY_PINS:
+                machine.Pin(pin, machine.Pin.OUT).value(1)  
         client.sendall("HTTP/1.1 303 See Other\nLocation: /temperature\n\n")
     client.close()
 
@@ -92,8 +95,8 @@ while True:
         handle_client(client)
 
     if calculateCoefficients:
-        for i in range(numSensors):
-            measured_pd = adc.read()
+        for i, pin in enumerate(currentSensor_SIG):
+            measured_pd = adc[i].read()
 
             voltage = measured_pd * (5000.0 / 4095)
 
@@ -119,15 +122,26 @@ while True:
                 sineCoefficients[i][n] = (sum_y_sin[n] * numIterations - sum_y * sum_sin[n]) / (
                         sum_y_sin2[n] * numIterations - sum_sin[n] * sum_sin[n])
 
+        if geyser_on:
+            total_current = sum(previousCurrents[0])
+            if total_current > 5:
+                max_current_index = previousCurrents[0].index(max(previousCurrents[0]))
+                for idx, pin in enumerate(RELAY_PINS):
+                    if idx != max_current_index:
+                        machine.Pin(pin, machine.Pin.OUT).value(0)  
+
         if previousCurrents[0][0] > GEYSER_THRESHOLD:
             if not geyser_on:
                 geyser_on = True
-                machine.Pin(RELAY_PIN, machine.Pin.OUT).value(1)  
+                for idx, pin in enumerate(RELAY_PINS):
+                    original_relay_states[idx] = machine.Pin(pin).value()
+                    machine.Pin(pin, machine.Pin.OUT).value(1)  
         else:
             if geyser_on:
                 geyser_on = False
-                machine.Pin(RELAY_PIN, machine.Pin.OUT).value(0)  
+                for idx, pin in enumerate(RELAY_PINS):
+                    machine.Pin(pin, machine.Pin.OUT).value(original_relay_states[idx])  
 
         calculateCoefficients = False
 
-    sleep(600)  
+    sleep(600)  # Sleep for 10 minutes (600 seconds)
