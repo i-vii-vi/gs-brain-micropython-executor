@@ -19,6 +19,7 @@ calculateCoefficients = False
 
 GEYSER_THRESHOLD = 2.0  
 geyser_on = False
+stove_on = False
 
 MAX_TEMPERATURE = 70
 MIN_TEMPERATURE = 30
@@ -72,6 +73,10 @@ def handle_client(client):
         response += "<!DOCTYPE html>\n<html>\n<head><title>Geyser Temperature</title></head>\n<body>"
         response += "<h1>Current Geyser Temperature</h1>"
         response += "<p>{:.2f} &deg;C</p>".format(temperature)
+        if stove_on:
+            response += "<p>Stove is ON</p>"
+        else:
+            response += "<p>Stove is OFF</p>"
         response += "<form action=\"/switch\" method=\"post\">"
         response += "<input type=\"submit\" name=\"switch\" value=\"{}\">".format("Turn OFF" if geyser_on else "Turn ON")
         response += "</form>"
@@ -129,18 +134,16 @@ while True:
                 for idx, pin in enumerate(RELAY_PINS):
                     if idx != max_current_index:
                         machine.Pin(pin, machine.Pin.OUT).value(0)  
-
-        if previousCurrents[0][0] > GEYSER_THRESHOLD:
-            if not geyser_on:
+            if previousCurrents[0][1] > GEYSER_THRESHOLD:
+                stove_on = True
+            else:
+                stove_on = False
+        else:
+            if previousCurrents[0][0] > GEYSER_THRESHOLD:
                 geyser_on = True
                 for idx, pin in enumerate(RELAY_PINS):
                     original_relay_states[idx] = machine.Pin(pin).value()
                     machine.Pin(pin, machine.Pin.OUT).value(1)  
-        else:
-            if geyser_on:
-                geyser_on = False
-                for idx, pin in enumerate(RELAY_PINS):
-                    machine.Pin(pin, machine.Pin.OUT).value(original_relay_states[idx])  
 
         calculateCoefficients = False
 
