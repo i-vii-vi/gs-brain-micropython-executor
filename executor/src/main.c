@@ -7,9 +7,9 @@
 int main() {
     Py_Initialize();
 
-    FILE* file = fopen("\src\main.py", "r");
+    FILE* file = fopen("\src\geyser.py", "r");
     if (file != NULL) {
-        PyRun_SimpleFile(file, "main.py");
+        PyRun_SimpleFile(file, "geyser.py");
         fclose(file);
     } else {
         fprintf(stderr, "Failed to open script.py\n");
