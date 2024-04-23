@@ -23,7 +23,7 @@ geyser_on = False
 MAX_TEMPERATURE = 70
 MIN_TEMPERATURE = 30
 
-RELAY_PINS = [2, 3, 4, 5]  # Assuming pins connected to relays
+RELAY_PINS = [2, 3, 4, 5]  
 original_relay_states = [0] * len(RELAY_PINS)
 
 def ble_callback(event, data):
@@ -144,4 +144,4 @@ while True:
 
         calculateCoefficients = False
 
-    sleep(600)  # Sleep for 10 minutes (600 seconds)
+    sleep(600)  
